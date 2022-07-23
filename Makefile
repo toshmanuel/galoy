@@ -1,11 +1,11 @@
 BIN_DIR=node_modules/.bin
 
 start-deps:
-	docker compose up integration-deps -d
+	docker-compose up integration-deps
 	direnv reload
 
 update-price-history:
-	docker compose run price-history node servers/history/cron.js
+	docker-compose run price-history node servers/history/cron.js
 
 start-main:
 	. ./.envrc && yarn tsnd --respawn --files -r tsconfig-paths/register -r src/services/tracing.ts \
@@ -37,16 +37,16 @@ watch:
 	yarn nodemon -V -e ts,graphql -w ./src -x make start
 
 clean-deps:
-	docker compose down
+	docker-compose down
 
 reset-deps: clean-deps start-deps
 
 test: unit integration
 
 test-migrate:
-	docker compose down -v
-	docker compose build
-	docker compose up mongodb-migrate
+	docker-compose down -v
+	docker-compose build
+	docker-compose up mongodb-migrate
 
 unit:
 	yarn test:unit
@@ -63,9 +63,9 @@ e2e:
 	yarn test:e2e
 
 e2e-in-ci:
-	docker compose -f docker-compose.yml up integration-deps -d && \
+	docker-compose -f docker-compose.yml up integration-deps -d && \
 	make create-tmp-env-ci && \
-	TMP_ENV_CI=tmp.env.ci docker compose -f docker-compose.yml up e2e-tests
+	TMP_ENV_CI=tmp.env.ci docker-compose -f docker-compose.yml up e2e-tests
 
 execute-e2e-from-within-container:
 	yarn install && \
@@ -81,9 +81,9 @@ reset-integration: reset-deps integration
 reset-e2e: reset-deps e2e
 
 integration-in-ci:
-	docker compose -f docker-compose.yml up integration-deps -d && \
+	docker-compose -f docker-compose.yml up integration-deps -d && \
 	make create-tmp-env-ci && \
-	TMP_ENV_CI=tmp.env.ci docker compose -f docker-compose.yml up integration-tests
+	TMP_ENV_CI=tmp.env.ci docker-compose -f docker-compose.yml up integration-tests
 
 execute-integration-from-within-container:
 	yarn install && \
