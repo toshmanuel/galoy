@@ -10,10 +10,8 @@ import {
   WalletCurrency,
 } from "@domain/shared"
 import { OnChainPaymentFlowBuilder } from "@domain/payments/onchain-payment-flow-builder"
-import { LedgerService } from "@services/ledger"
 import { toSats } from "@domain/bitcoin"
 import { ImbalanceCalculator } from "@domain/ledger/imbalance-calculator"
-import { WalletsRepository } from "@services/mongoose"
 
 const calc = AmountCalculator()
 const feeConfig = getFeesConfig()
@@ -84,17 +82,25 @@ describe("OnChainPaymentFlowBuilder", () => {
     })
   }
 
-  const ledger = LedgerService()
-  const wallets = WalletsRepository()
+  const volumeLightningFn = async () =>
+    Promise.resolve({
+      outgoingBaseAmount: toSats(1000),
+      incomingBaseAmount: toSats(1000),
+    })
+
+  const volumeOnChainFn = async () =>
+    Promise.resolve({
+      outgoingBaseAmount: toSats(1000),
+      incomingBaseAmount: toSats(1000),
+    })
 
   describe("onchain initiated", () => {
     const onChainBuilder = OnChainPaymentFlowBuilder({
       usdFromBtcMidPriceFn,
       btcFromUsdMidPriceFn,
-      volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-      volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
-      isExternalAddress: async (address: OnChainAddress) =>
-        !!(await wallets.findByAddress(address)),
+      volumeLightningFn,
+      volumeOnChainFn,
+      isExternalAddress: async (address: OnChainAddress) => Promise.resolve(!!address),
     })
     const checkSettlementMethod = (payment) => {
       expect(payment).toEqual(
@@ -160,7 +166,7 @@ describe("OnChainPaymentFlowBuilder", () => {
                 )
               }
 
-              it("correctly applies miner, bank and imbalance fees", async () => {
+              it.only("correctly applies miner, bank and imbalance fees", async () => {
                 const minerFee = { amount: 300n, currency: WalletCurrency.Btc }
                 const payment = await withAmountBuilder
                   .withConversion({
@@ -189,8 +195,8 @@ describe("OnChainPaymentFlowBuilder", () => {
 
                 const imbalanceCalculator = ImbalanceCalculator({
                   method: feeConfig.withdrawMethod,
-                  volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-                  volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+                  volumeLightningFn,
+                  volumeOnChainFn,
                   sinceDaysAgo: feeConfig.withdrawDaysLookback,
                 })
                 const imbalance = await imbalanceCalculator.getSwapOutImbalanceAmount(
@@ -198,17 +204,18 @@ describe("OnChainPaymentFlowBuilder", () => {
                 )
                 if (imbalance instanceof Error) return imbalance
 
-                const btcProtocolFee = onChainFees.withdrawalFee({
+                const withdrawFees = onChainFees.withdrawalFee({
                   minerFee,
                   amount: sendAmount,
                   minBankFee,
                   imbalance,
                 })
-                if (btcProtocolFee instanceof Error) return btcProtocolFee
-                expect(btcProtocolFee).not.toBeInstanceOf(Error)
+                if (withdrawFees instanceof Error) return withdrawFees
+                expect(withdrawFees).not.toBeInstanceOf(Error)
 
+                const btcProtocolFee = withdrawFees.totalFee
                 const usdProtocolFee = {
-                  amount: mulCeilByMidPriceRatio(btcProtocolFee.totalFee.amount),
+                  amount: mulCeilByMidPriceRatio(btcProtocolFee.amount),
                   currency: WalletCurrency.Usd,
                 }
 
@@ -216,6 +223,13 @@ describe("OnChainPaymentFlowBuilder", () => {
                 checkSettlementMethod(payment)
                 checkAmount(payment)
                 checkSenderWallet(payment)
+                // TODO: REACHED HERE, debug dealer vs. mid price in builder
+                console.log("HERE 0:", payment)
+                console.log("HERE 1:", {
+                  usdPaymentAmount,
+                  btcProtocolFee,
+                  usdProtocolFee,
+                })
                 expect(payment).toEqual(
                   expect.objectContaining({
                     usdPaymentAmount,
@@ -420,8 +434,8 @@ describe("OnChainPaymentFlowBuilder", () => {
 
                 const imbalanceCalculator = ImbalanceCalculator({
                   method: feeConfig.withdrawMethod,
-                  volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-                  volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+                  volumeLightningFn,
+                  volumeOnChainFn,
                   sinceDaysAgo: feeConfig.withdrawDaysLookback,
                 })
                 const imbalanceForWallet =
@@ -591,8 +605,8 @@ describe("OnChainPaymentFlowBuilder", () => {
         const payment = await OnChainPaymentFlowBuilder({
           usdFromBtcMidPriceFn,
           btcFromUsdMidPriceFn,
-          volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-          volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+          volumeLightningFn,
+          volumeOnChainFn,
           isExternalAddress: async () => Promise.resolve(!isIntraLedger),
         })
           .withAddress("" as OnChainAddress)
@@ -619,8 +633,8 @@ describe("OnChainPaymentFlowBuilder", () => {
         const payment = await OnChainPaymentFlowBuilder({
           usdFromBtcMidPriceFn,
           btcFromUsdMidPriceFn,
-          volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-          volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+          volumeLightningFn,
+          volumeOnChainFn,
           isExternalAddress: async () => Promise.resolve(!isIntraLedger),
         })
           .withAddress("address" as OnChainAddress)
@@ -647,8 +661,8 @@ describe("OnChainPaymentFlowBuilder", () => {
         const payment = await OnChainPaymentFlowBuilder({
           usdFromBtcMidPriceFn,
           btcFromUsdMidPriceFn,
-          volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-          volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+          volumeLightningFn,
+          volumeOnChainFn,
           isExternalAddress: async () => Promise.resolve(!isIntraLedger),
         })
           .withAddress("address" as OnChainAddress)
@@ -674,8 +688,8 @@ describe("OnChainPaymentFlowBuilder", () => {
         const payment = await OnChainPaymentFlowBuilder({
           usdFromBtcMidPriceFn,
           btcFromUsdMidPriceFn,
-          volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-          volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+          volumeLightningFn,
+          volumeOnChainFn,
           isExternalAddress: async () => Promise.resolve(isIntraLedger),
         })
           .withAddress("address" as OnChainAddress)
@@ -701,8 +715,8 @@ describe("OnChainPaymentFlowBuilder", () => {
         const payment = await OnChainPaymentFlowBuilder({
           usdFromBtcMidPriceFn,
           btcFromUsdMidPriceFn,
-          volumeLightningFn: ledger.lightningTxBaseVolumeSince,
-          volumeOnChainFn: ledger.onChainTxBaseVolumeSince,
+          volumeLightningFn,
+          volumeOnChainFn,
           isExternalAddress: async () => Promise.resolve(!isIntraLedger),
         })
           .withAddress("address" as OnChainAddress)
