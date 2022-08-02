@@ -423,6 +423,8 @@ export const mapError = (error: ApplicationError): CustomApolloError => {
     case "InvalidPubKeyError":
     case "SkipProbeForPubkeyError":
     case "SecretDoesNotMatchAnyExistingHodlInvoiceError":
+    case "AccountCustomFieldsError":
+    case "AccountCustomFieldsUpdateError":
       message = `Unknown error occurred (code: ${error.name}${
         error.message ? ": " + error.message : ""
       })`
