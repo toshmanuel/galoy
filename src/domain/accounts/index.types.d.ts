@@ -46,10 +46,18 @@ type AccountStatusHistory = Array<{
   comment?: string
 }>
 
+type AccountCustomFieldValues =
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | boolean[]
+
 type AccountCustomFields = {
   readonly accountId: AccountId
   modifiedByUserId: UserId
-  customFields: { [k: string]: string | number | boolean }
+  customFields: { [k: string]: AccountCustomFieldValues }
   createdAt: Date
 }
 
@@ -122,13 +130,13 @@ type AccountValidator = {
 
 type ListByCustomFieldArgs = {
   key: string
-  value: string | number | boolean
+  value: AccountCustomFieldValues
 }
 
 type PersistNewCustomFieldsArgs = {
   accountId: AccountId
   modifiedByUserId: UserId
-  customFields: { [k: string]: string | number | boolean }
+  customFields: { [k: string]: AccountCustomFieldValues }
 }
 
 interface IAccountsRepository {
