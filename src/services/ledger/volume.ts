@@ -40,9 +40,12 @@ const volumeFn =
     txVolumeSince({ ...args, txnGroup })
 
 const volumeAmountFn =
-  (txnGroup: TxnGroup): GetVolumeAmountSinceFn<WalletCurrency> =>
+  (txnGroup: TxnGroup): GetVolumeAmountSinceFn =>
   async (args) => {
-    const { walletId, timestamp, walletCurrency } = args
+    const {
+      walletDescriptor: { id: walletId, currency: walletCurrency },
+      timestamp,
+    } = args
     const volume = await txVolumeSince({ walletId, timestamp, txnGroup })
     if (volume instanceof Error) return volume
 
