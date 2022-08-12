@@ -42,15 +42,16 @@ export const getTransactionsForWalletsByAddresses = async ({
 
   // we are getting both the transactions in the mempool and the transaction that
   // have been mined by not yet credited because they haven't reached enough confirmations
-  const onChainTxs = await redisCache.getOrSet({
+  const onChainTxsWithCache = await redisCache.getOrSet({
     key: CacheKeys.LastOnChainTransactions,
     ttlSecs: SECS_PER_10_MINS,
     fn: () => onChain.listIncomingTransactions(ONCHAIN_MIN_CONFIRMATIONS),
   })
-  if (onChainTxs instanceof Error) {
-    baseLogger.warn({ onChainTxs }, "impossible to get listIncomingTransactions")
-    return PartialResult.partial(confirmedHistory.transactions, onChainTxs)
+  if (onChainTxsWithCache instanceof Error) {
+    baseLogger.warn({ onChainTxsWithCache }, "impossible to get listIncomingTransactions")
+    return PartialResult.partial(confirmedHistory.transactions, onChainTxsWithCache)
   }
+  const onChainTxs = IncomingOnChainTransactionsFromCache(onChainTxsWithCache)
   redisCache.set({
     key: CacheKeys.LastOnChainTransactions,
     value: onChainTxs,
@@ -93,3 +94,18 @@ export const getTransactionsForWalletsByAddresses = async ({
     }).transactions,
   )
 }
+
+const IncomingOnChainTransactionsFromCache = (
+  txns: (IncomingOnChainTransactionFromCache | IncomingOnChainTransaction)[],
+) =>
+  txns.map(
+    (txn): IncomingOnChainTransaction => ({
+      ...txn,
+      createdAt: new Date(txn.createdAt),
+      uniqueAddresses: () =>
+        txn.rawTx.outs.reduce<OnChainAddress[]>((a: OnChainAddress[], o: TxOut) => {
+          if (o.address && !a.includes(o.address)) a.push(o.address)
+          return a
+        }, []),
+    }),
+  )
