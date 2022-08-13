@@ -86,6 +86,7 @@ export const PaymentFlow = <S extends WalletCurrency, R extends WalletCurrency>(
     if (state.senderWalletCurrency !== balanceAmount.currency)
       return new InvalidCurrencyForWalletError()
 
+    console.log("HERE 20:", state)
     const { amount, fee } =
       balanceAmount.currency === WalletCurrency.Btc
         ? { amount: state.btcPaymentAmount, fee: state.btcProtocolFee }

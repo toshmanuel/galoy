@@ -247,6 +247,7 @@ const LPFBWithRecipientWallet = <S extends WalletCurrency, R extends WalletCurre
   }): LPFBWithConversion<S, R> | LPFBWithError => {
     const stateWithCreatedAt = { ...state, createdAt: new Date(Date.now()) }
     const { btcPaymentAmount, usdPaymentAmount, btcProtocolFee, usdProtocolFee } = state
+    console.log("HERE 30:", state)
 
     // Use mid price when no buy / sell required
     const noConversionRequired =
@@ -359,6 +360,12 @@ const LPFBWithRecipientWallet = <S extends WalletCurrency, R extends WalletCurre
         if (priceRatio instanceof Error) return priceRatio
 
         const usdProtocolFee = priceRatio.convertFromBtcToCeil(btcProtocolFee)
+        console.log("HERE 31:", {
+          btcPaymentAmount,
+          usdPaymentAmount: convertedAmount,
+          btcProtocolFee,
+          usdProtocolFee,
+        })
         return {
           ...stateWithCreatedAt,
           btcPaymentAmount,
