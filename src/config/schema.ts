@@ -353,6 +353,11 @@ export const configSchema = {
       required: ["mandatory"],
       additionalProperties: false,
     },
+    skipFeeProbe: {
+      type: "array",
+      items: { type: "string", maxLength: 66, minLength: 66 },
+      uniqueItems: true,
+    },
   },
   required: [
     "name",

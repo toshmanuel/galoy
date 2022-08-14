@@ -82,6 +82,8 @@ export const getLightningAddressDomainAliases = (): string[] =>
   yamlConfig.lightningAddressDomainAliases
 export const getLocale = (): string => yamlConfig.locale || "en"
 
+export const getPubkeysToSkipProbe = (): Pubkey[] => yamlConfig.skipFeeProbe
+
 const i18n = new I18n()
 i18n.configure({
   objectNotation: true,
